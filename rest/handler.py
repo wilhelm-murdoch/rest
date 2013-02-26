@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import request, make_response
 import inspect
+import sys
 from .errors import *
 from .support.flask import APIException
 try:
@@ -28,7 +29,8 @@ ALLOWED_METHODS_RESOURCE = {
 }
 
 def rest_to_flask_exception(e):
-    return APIException(e.code, e.message)
+    _, _, traceback = sys.exc_info()
+    raise APIException, (e.code, e.message), traceback
 
 def default_response_converter(response):
     headers = {'Content-Type' : 'application/json'}
@@ -80,11 +82,12 @@ class BaseHandler(object):
                         result = default_response_converter(result)
                     return result
             except APIError, e:
-                raise rest_to_flask_exception(e)
+                rest_to_flask_exception(e)
             except Exception, e:
-                raise InternalServerError(e)
+                _, _, traceback = sys.exc_info()
+                raise InternalServerError, (e,), traceback
         except APIError, e:
-            raise rest_to_flask_exception(e)
+            rest_to_flask_exception(e)
 
 class CollectionHandler(BaseHandler):
     methods_mappings = ALLOWED_METHODS_COLLECTION
