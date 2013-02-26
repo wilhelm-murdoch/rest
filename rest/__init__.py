@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from .core import endpoint
+from .core import API
 
 __all__= [
-    'endpoint',
+    'API',
 ]
