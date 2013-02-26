@@ -2,6 +2,7 @@
 from unittest import TestCase
 from flask import Flask, make_response, request
 from rest import API
+from rest.errors import NotFound, NotAuthorized
 import json
 
 app = Flask(__name__)
@@ -14,12 +15,21 @@ class AppleEndpoint(object):
 
     def __init__(self, store_id):
         self.store_id = store_id
+        self.apples = [{'store' : self.store_id, 'apple' : x} for x in xrange(3)]
 
     def all(self):
-        return [{'store' : self.store_id, 'apple' : x} for x in xrange(3)]
+        return self.apples
 
     def one(self, resource_id):
-        return {'store' : self.store_id, 'apple' : resource_id}
+        for entry in self.apples:
+            if entry['apple'] == int(resource_id):
+                return entry
+        raise NotFound
+
+    def create(self):
+        if request.form.get('foo', None) != 'bar':
+            raise NotAuthorized('foo is not bar')
+        self.apples.append({'store' : self.store_id, 'apple' : self.apples[-1]['apple'] + 1})
 
 @api.endpoint('stores/<int:store_id>/bananas','<int:banana_id>')
 class BananaEndpoint(object):
@@ -60,8 +70,19 @@ class TestCore(TestCase):
         self.assertEqual(all_response.headers['Content-Type'], 'application/json')
         self.assertEqual(apples.all(), json.loads(all_response.data))
 
+        one_response = self.client.get('/test/stores/1/apples/2')
+        self.assertEqual(apples.one('2'), json.loads(one_response.data))
+
         one_response = self.client.get('/test/stores/1/apples/25')
-        self.assertEqual(apples.one('25'), json.loads(one_response.data))
+        self.assertEqual(404, one_response.status_code)
+
+        create_response = self.client.post('/test/stores/1/apples', data={'foo' : 'bar'})
+        self.assertEqual(201, create_response.status_code)
+        self.assertEqual('', create_response.data)
+
+        create_response = self.client.post('/test/stores/1/apples', data={'foo' : 'baz'})
+        self.assertEqual(401, create_response.status_code)
+        self.assertEqual('Unauthorized', json.loads(create_response.data)['name'])
 
     def test_complex_class(self):
         bananas = BananaEndpoint(1)

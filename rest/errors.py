@@ -14,3 +14,6 @@ class InternalServerError(APIError):
 
 class NotFound(APIError):
     code = 404
+
+class NotAuthorized(APIError):
+    code = 401
