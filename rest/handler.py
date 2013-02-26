@@ -87,7 +87,7 @@ class BaseHandler(object):
         except APIError, e:
             raise_rest_to_flask_exception(e)
         except HTTPException, e:
-            raise_rest_to_flask_exception(e)            
+            raise
         except Exception, e:
             e = InternalServerError(e)
             raise_rest_to_flask_exception(e)
