@@ -29,6 +29,9 @@ ALLOWED_METHODS_RESOURCE = {
 }
 
 def rest_to_flask_exception(e):
+    return APIException(e.code, e.message)
+
+def raise_rest_to_flask_exception(e):
     _, _, traceback = sys.exc_info()
     raise APIException, (e.code, e.message), traceback
 
@@ -51,7 +54,10 @@ class BaseHandler(object):
         self.cls = cls
 
     def _args_to_init_and_method_args(self, args):
-        init_arg_names = inspect.getargspec(self.cls.__init__).args
+        if hasattr(inspect, 'getcallargs'):
+            init_arg_names = inspect.getargspec(self.cls.__init__).args    
+        else:
+            init_arg_names = inspect.getargspec(self.cls.__init__).args
         init_arg_names.remove('self')
 
         in_args = args.copy()
@@ -68,26 +74,23 @@ class BaseHandler(object):
         init_args, method_args = self._args_to_init_and_method_args(kwargs)
 
         try:
-            try:
-                instance = self.cls(**init_args)
-    
-                handler = self.methods_mappings[request.method]
-                if not hasattr(instance, handler):
-                    raise MethodNotAllowed('{} is not allowed'.format(request.method))
+            instance = self.cls(**init_args)
+
+            handler = self.methods_mappings[request.method]
+            if not hasattr(instance, handler):
+                raise MethodNotAllowed('{} is not allowed'.format(request.method))
+            else:
+                result = getattr(instance, handler)(**method_args)
+                if hasattr(instance, 'make_response'):
+                    result = getattr(instance, 'make_response')(result)
                 else:
-                    result = getattr(instance, handler)(**method_args)
-                    if hasattr(instance, 'make_response'):
-                        result = getattr(instance, 'make_response')(result)
-                    else:
-                        result = default_response_converter(result)
-                    return result
-            except APIError, e:
-                rest_to_flask_exception(e)
-            except Exception, e:
-                _, _, traceback = sys.exc_info()
-                raise InternalServerError, (e,), traceback
+                    result = default_response_converter(result)
+                return result
         except APIError, e:
-            rest_to_flask_exception(e)
+            raise_rest_to_flask_exception(e)
+        except Exception, e:
+            e = InternalServerError(e)
+            raise_rest_to_flask_exception(e)
 
 class CollectionHandler(BaseHandler):
     methods_mappings = ALLOWED_METHODS_COLLECTION
