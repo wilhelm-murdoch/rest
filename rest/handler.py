@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from flask import request, make_response
-import inspect
 import sys
 from .errors import *
 from .support.flask import APIException
+from werkzeug.exceptions import HTTPException
+from .utils import get_argument_names_for_a_function
 try:
     import json
 except ImportError:
@@ -54,10 +55,7 @@ class BaseHandler(object):
         self.cls = cls
 
     def _args_to_init_and_method_args(self, args):
-        if hasattr(inspect, 'getcallargs'):
-            init_arg_names = inspect.getargspec(self.cls.__init__).args    
-        else:
-            init_arg_names = inspect.getargspec(self.cls.__init__).args
+        init_arg_names = get_argument_names_for_a_function(self.cls.__init__)
         init_arg_names.remove('self')
 
         in_args = args.copy()
@@ -72,7 +70,7 @@ class BaseHandler(object):
 
     def __call__(self, **kwargs):
         init_args, method_args = self._args_to_init_and_method_args(kwargs)
-
+        
         try:
             instance = self.cls(**init_args)
 
@@ -88,6 +86,8 @@ class BaseHandler(object):
                 return result
         except APIError, e:
             raise_rest_to_flask_exception(e)
+        except HTTPException, e:
+            raise_rest_to_flask_exception(e)            
         except Exception, e:
             e = InternalServerError(e)
             raise_rest_to_flask_exception(e)
