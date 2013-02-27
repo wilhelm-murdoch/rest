@@ -17,3 +17,6 @@ class NotFound(APIError):
 
 class NotAuthorized(APIError):
     code = 401
+
+class Forbidden(APIError):
+    code = 403

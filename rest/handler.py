@@ -25,7 +25,7 @@ ALLOWED_METHODS_RESOURCE = {
     'OPTIONS' : 'one',
     'HEAD' : 'one',
     'PUT' : 'update',
-    'PATCH' : 'updatepartial',
+    'PATCH' : 'update_partial',
     'DELETE' : 'delete',
 }
 
