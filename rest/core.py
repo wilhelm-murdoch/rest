@@ -17,15 +17,18 @@ def normalize_url_part(s):
     return NORMALIZED_URL_REGEX.sub('\g<1>', s)
 
 class API(object):
-    def __init__(self, app, root):
+    def __init__(self, app, root=None):
         self.app = app
-        self.root = normalize_url_part(root)
+        self.root = normalize_url_part(root) if root else None
 
         self.app.register_error_handler(404, rest_to_flask_exception)
 
     def endpoint(self, rule, resource_id_mapping='<resource_id>'):
         def decorator(cls):
-            handler = EndpointHandler('/{}/{}'.format(self.root, normalize_url_part(rule)), resource_id_mapping, cls)
+            if self.root:
+                handler = EndpointHandler('/{}/{}'.format(self.root, normalize_url_part(rule)), resource_id_mapping, cls)
+            else:
+                handler = EndpointHandler('/{}'.format(normalize_url_part(rule)), resource_id_mapping, cls)
             self.app.add_url_rule(handler.collection_handler_rule, handler.collection_handler_name, handler.collection_handler, methods=ALL_METHODS)
             self.app.add_url_rule(handler.resource_handler_rule, handler.resource_handler_name, handler.resource_handler, methods=ALL_METHODS)
             return cls
