@@ -9,7 +9,7 @@ class APIException(HTTPException):
 
     def __init__(self, code, description=None):
         self.code = code
-        super(APIException, self).__init__(str(description))
+        super(APIException, self).__init__(description)
         
     def get_body(self, environ):
         body = {
